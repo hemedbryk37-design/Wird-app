@@ -1,0 +1,17 @@
+name: Unzip
+on: workflow_dispatch
+permissions:
+  contents: write
+jobs:
+  unzip:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - run: |
+          unzip -o project-updated.zip
+          rm project-updated.zip
+          git config user.name "bot"
+          git config user.email "bot@github.com"
+          git add .
+          git commit -m "Extract files"
+          git push
