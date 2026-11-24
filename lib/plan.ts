@@ -60,17 +60,17 @@ export const WEEKDAYS: { value: number; label: string; short: string }[] = [
 ]
 
 const numberFormat = new Intl.NumberFormat('ar-EG')
-const longDate = new Intl.DateTimeFormat('ar-EG-u-ca-gregory', {
+const longDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
   weekday: 'long',
   day: 'numeric',
   month: 'long',
   year: 'numeric',
 })
-const shortDate = new Intl.DateTimeFormat('ar-EG-u-ca-gregory', {
+const shortDate = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', {
   day: 'numeric',
   month: 'long',
 })
-const weekdayName = new Intl.DateTimeFormat('ar-EG-u-ca-gregory', { weekday: 'long' })
+const weekdayName = new Intl.DateTimeFormat('ar-SA-u-ca-islamic-umalqura', { weekday: 'long' })
 
 export const formatNumber = (n: number) => numberFormat.format(n)
 

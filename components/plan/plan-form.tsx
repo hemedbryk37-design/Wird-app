@@ -2,7 +2,7 @@
 
 import { CalendarDays, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
-import { UNIT_OPTIONS, WEEKDAYS, unitLabel, type PlanDraft, type PlanMode, type UnitKey } from '@/lib/plan'
+import { UNIT_OPTIONS, WEEKDAYS, formatLongDate, unitLabel, type PlanDraft, type PlanMode, type UnitKey } from '@/lib/plan'
 import { ReminderField } from './reminder-field'
 
 type Props = {
@@ -117,6 +117,9 @@ export function PlanForm({ draft, onChange, renderImport, totalLocked }: Props) 
             value={draft.startDate}
             onChange={(e) => onChange({ startDate: e.target.value })}
           />
+          {draft.startDate && (
+            <p className="text-xs text-muted-foreground">الموافق هجريًا: {formatLongDate(draft.startDate)}</p>
+          )}
         </div>
       </fieldset>
 
