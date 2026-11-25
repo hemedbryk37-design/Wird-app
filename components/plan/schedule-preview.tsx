@@ -1,3 +1,4 @@
+import { formatGregorianLong, formatGregorianShort } from '@/lib/hijri'
 import { AlertCircle, CalendarCheck2 } from 'lucide-react'
 import {
   formatLongDate,
@@ -39,6 +40,7 @@ export function SchedulePreview({ draft, result }: Props) {
         <div className="col-span-2 rounded-xl bg-primary p-4 text-primary-foreground">
           <dt className="text-xs opacity-80">تاريخ الختم المتوقع</dt>
           <dd className="mt-1 text-lg font-semibold text-pretty">{formatLongDate(last.date)}</dd>
+          <dd className="mt-0.5 text-xs opacity-80">الموافق ميلاديًا: {formatGregorianLong(last.date)}</dd>
         </div>
       </dl>
 
@@ -75,7 +77,8 @@ export function SchedulePreview({ draft, result }: Props) {
                   <td className="px-3 py-2.5 tabular-nums text-muted-foreground">{formatNumber(entry.index)}</td>
                   <td className="px-3 py-2.5">
                     <span className="font-medium">{formatWeekday(entry.date)}</span>
-                    <span className="block text-xs text-muted-foreground">{formatShortDate(entry.date)}</span>
+                    <span className="block text-sm font-medium">{formatShortDate(entry.date)}</span>
+                    <span className="block text-xs text-muted-foreground">{formatGregorianShort(entry.date)} م</span>
                   </td>
                   <td className="px-3 py-2.5">{formatQuantity(entry.amount, draft)}</td>
                   <td className="px-3 py-2.5 tabular-nums text-muted-foreground">

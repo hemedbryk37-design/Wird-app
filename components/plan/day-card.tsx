@@ -8,6 +8,7 @@ import { formatNumber, formatQuantity, formatShortDate, formatWeekday, type Save
 import { celebrate } from '@/lib/feedback'
 import { textKey, type DayProgress } from '@/lib/progress'
 import { removeStorageKeys, useLocalStorage } from '@/lib/use-local-storage'
+import { formatGregorianShort } from '@/lib/hijri'
 import { splitParagraphs, useBookmarks, useResume } from '@/lib/bookmarks'
 import { BookmarkButton } from './bookmark-button'
 import { PoetryView } from './poetry-view'
@@ -101,7 +102,8 @@ export function DayCard({ plan, entry, progress, onToggleDone, onPurged }: Props
             <p className="flex items-center gap-2 text-sm font-semibold">
               <span className="text-muted-foreground tabular-nums">{formatNumber(entry.index)}.</span>
               {formatWeekday(entry.date)}
-              <span className="font-normal text-muted-foreground">{formatShortDate(entry.date)}</span>
+              <span>{formatShortDate(entry.date)}</span>
+              <span className="text-xs font-normal text-muted-foreground">({formatGregorianShort(entry.date)} م)</span>
             </p>
             <p className="mt-0.5 flex flex-wrap items-center gap-x-2 text-xs text-muted-foreground">
               <span>{quantity}</span>
