@@ -30,8 +30,8 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
     setError(null)
     setLoading(true)
     try {
-      const text = await extractBookText(file)
-      onImport({ name: file.name, text, wordsPerPage: book?.wordsPerPage ?? DEFAULT_WORDS_PER_PAGE })
+      const { text, unwrap } = await extractBookText(file)
+      onImport({ name: file.name, text, unwrap, wordsPerPage: book?.wordsPerPage ?? DEFAULT_WORDS_PER_PAGE })
     } catch (e) {
       setError(e instanceof ImportError ? e.message : 'تعذّرت قراءة الملف.')
     } finally {

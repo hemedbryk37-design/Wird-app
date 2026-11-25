@@ -15,6 +15,7 @@ import {
   type ToneHandle,
   type ToneId,
 } from '@/lib/tones'
+import { isNative, prepareNativeAlarm } from '@/lib/native-alarm'
 import { getNotificationState, sendTestNotification, type NotificationState } from '@/lib/reminders'
 
 type Props = {
@@ -185,7 +186,9 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
           </p>
         )}
         <p className="text-xs text-muted-foreground text-pretty">
-          تُسمَع النغمة عند فتح التطبيق وقت التنبيه؛ أما والتطبيق مغلق فيستخدم النظام صوت الإشعار الافتراضي.
+          {isNative()
+            ? 'في أندرويد تُستخدم النغمات المدمجة الأربع للمنبه؛ والنغمة المخصصة تعمل داخل التطبيق فقط ويُستخدم صوت النظام لها خارجه.'
+            : 'تُسمَع النغمة عند فتح التطبيق وقت التنبيه؛ أما والتطبيق مغلق فيستخدم النظام صوت الإشعار الافتراضي.'}
         </p>
       </div>
 
@@ -199,7 +202,10 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
             role="switch"
             aria-checked={alarm}
             aria-labelledby="alarmLabel"
-            onClick={() => onAlarmChange(!alarm)}
+            onClick={() => {
+              onAlarmChange(!alarm)
+              if (!alarm) void prepareNativeAlarm().catch(() => {})
+            }}
             className={cn(
               'relative h-7 w-12 shrink-0 rounded-full border border-input transition outline-none focus-visible:ring-3 focus-visible:ring-ring/40',
               alarm ? 'bg-primary' : 'bg-muted',
@@ -215,7 +221,9 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
         </div>
         {alarm && (
           <p className="text-xs text-muted-foreground text-pretty">
-            يبقى الإشعار ظاهرًا مع اهتزاز قوي، ويرنّ صوت منبه عبر مستوى الوسائط عند فتح التطبيق. تجاوز الصامت بالكامل والتطبيق مغلق يتطلب تطبيق أندرويد أصلي.
+            {isNative()
+              ? 'يُجدوَل المنبه عبر نظام أندرويد بقناة عالية الأولوية، فيرنّ والتطبيق مغلق أو والهاتف في وضع السكون.'
+              : 'يبقى الإشعار ظاهرًا مع اهتزاز قوي، ويرنّ صوت منبه عند فتح التطبيق. للرنين والتطبيق مغلق ثبّت نسخة أندرويد (APK).'}
           </p>
         )}
       </div>

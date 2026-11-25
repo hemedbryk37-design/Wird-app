@@ -90,6 +90,25 @@ export function PlanForm({ draft, onChange, renderImport, totalLocked }: Props) 
           </div>
         </div>
 
+        <div className="flex flex-col gap-2">
+          <label htmlFor="startPoint" className="text-sm font-medium">
+            نقطة البداية (من أين تبدأ؟)
+          </label>
+          <input
+            id="startPoint"
+            type="number"
+            inputMode="numeric"
+            min={1}
+            className={fieldClass}
+            placeholder="1"
+            value={draft.startPoint === 0 ? '' : (draft.startPoint ?? 1)}
+            onChange={(e) => onChange({ startPoint: toNumber(e.target.value) })}
+          />
+          <p className="text-xs text-muted-foreground">
+            يبدأ الجدول من هذا الرقم حتى نهاية الكمية الإجمالية، وتُتجاهل الوحدات التي قبله في الملف المرفوع.
+          </p>
+        </div>
+
         {draft.unit === 'custom' && (
           <div className="flex flex-col gap-2">
             <label htmlFor="customUnit" className="text-sm font-medium">

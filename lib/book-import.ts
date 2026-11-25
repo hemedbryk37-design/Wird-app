@@ -1,7 +1,7 @@
 import { HEMISTICH_SEPARATOR } from './progress'
 import { formatNumber, type ScheduleEntry, type UnitKey } from './plan'
 
-export type ImportedBook = { name: string; text: string; wordsPerPage: number }
+export type ImportedBook = { name: string; text: string; wordsPerPage: number; unwrap?: boolean }
 
 export const IMPORT_KEY = 'mutabaa:import'
 export const MAX_IMPORT_BYTES = 1.5 * 1024 * 1024
@@ -106,8 +106,9 @@ export function splitBook(book: ImportedBook, unit: UnitKey): SplitResult {
     return { segments: splitPagesByWords(text, Math.max(1, book.wordsPerPage)), method: 'page-words' }
   }
 
+  const unwrap = (p: string) => (book.unwrap ? p.replace(/\s*\n\s*/g, ' ').replace(/ {2,}/g, ' ') : p)
   const paras = paragraphs(text)
-  if (paras.length > 1) return { segments: paras, method: 'paragraphs' }
+  if (paras.length > 1) return { segments: paras.map(unwrap), method: 'paragraphs' }
   return { segments: nonEmptyLines(text), method: 'lines' }
 }
 

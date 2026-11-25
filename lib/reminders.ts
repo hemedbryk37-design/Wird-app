@@ -1,4 +1,4 @@
-import { formatNumber, formatQuantity, toISODate, type SavedPlan } from './plan'
+import { formatNumber, formatQuantity, toISODate, type SavedPlan, type ScheduleEntry } from './plan'
 import { progressKey, type PlanProgress } from './progress'
 
 export type NotificationState = NotificationPermission | 'unsupported'
@@ -30,13 +30,18 @@ export function sendTestNotification() {
   return showNotification('تنبيهات الورد مفعّلة', 'ستصلك رسالة في الموعد الذي حددته بعنوان الورد والكمية المطلوبة.', 'mutabaa-test')
 }
 
-function readProgress(planId: string): PlanProgress {
+export function readProgress(planId: string): PlanProgress {
   try {
     return JSON.parse(localStorage.getItem(progressKey(planId)) ?? '{}') as PlanProgress
   } catch {
     return {}
   }
 }
+
+export const reminderTitle = (plan: SavedPlan) => `حان وقت ورد: ${plan.title || 'خطتك'}`
+
+export const reminderBody = (plan: SavedPlan, entry: ScheduleEntry) =>
+  `المطلوب اليوم: ${formatQuantity(entry.amount, plan)} (من ${formatNumber(entry.from)} إلى ${formatNumber(entry.to)})`
 
 export function parseTime(time: string | undefined) {
   if (!time) return null
@@ -55,8 +60,8 @@ export async function notifyIfDue(plan: SavedPlan, now = new Date()) {
   if (getNotificationState() !== 'granted') return true
 
   await showNotification(
-    `حان وقت ورد: ${plan.title || 'خطتك'}`,
-    `المطلوب اليوم: ${formatQuantity(entry.amount, plan)} (من ${formatNumber(entry.from)} إلى ${formatNumber(entry.to)})`,
+    reminderTitle(plan),
+    reminderBody(plan, entry),
     `mutabaa-${plan.id}`,
     !!plan.alarmMode,
   )

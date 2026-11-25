@@ -5,6 +5,7 @@ export type PlanMode = 'fixed' | 'weekdays'
 export type PlanDraft = {
   title: string
   total: number
+  startPoint?: number
   unit: UnitKey
   customUnit: string
   mode: PlanMode
@@ -120,6 +121,7 @@ export function createDefaultDraft(): PlanDraft {
   return {
     title: '',
     total: 0,
+    startPoint: 1,
     unit: 'verse',
     customUnit: '',
     mode: 'fixed',
@@ -141,16 +143,19 @@ export function buildSchedule(draft: PlanDraft): ScheduleResult {
   const total = Math.floor(draft.total)
   if (!total || total < 1) return { ok: false, reason: 'أدخل الكمية الإجمالية لبدء الحساب.' }
   if (!draft.startDate) return { ok: false, reason: 'اختر تاريخ البدء.' }
+  const first = Math.max(1, Math.floor(draft.startPoint || 1))
+  if (first > total) return { ok: false, reason: 'نقطة البداية أكبر من الكمية الإجمالية.' }
+  const remaining = total - first + 1
   const start = parseISODate(draft.startDate)
 
   if (draft.mode === 'fixed') {
     const daily = Math.floor(draft.daily)
     if (!daily || daily < 1) return { ok: false, reason: 'حدّد مقدار الورد اليومي.' }
-    const days = Math.ceil(total / daily)
+    const days = Math.ceil(remaining / daily)
     if (days > MAX_ENTRIES) return { ok: false, reason: 'المدة طويلة جدًا، زد مقدار الورد اليومي.' }
 
     const entries: ScheduleEntry[] = []
-    let from = 1
+    let from = first
     for (let i = 0; i < days; i++) {
       const amount = Math.min(daily, total - from + 1)
       entries.push({ index: i + 1, date: toISODate(addDays(start, i)), amount, from, to: from + amount - 1 })
@@ -172,10 +177,10 @@ export function buildSchedule(draft: PlanDraft): ScheduleResult {
   }
   if (dates.length === 0) return { ok: false, reason: 'لا توجد أيام مطابقة ضمن المدة المحددة.' }
 
-  const base = Math.floor(total / dates.length)
-  const remainder = total % dates.length
+  const base = Math.floor(remaining / dates.length)
+  const remainder = remaining % dates.length
   const entries: ScheduleEntry[] = []
-  let from = 1
+  let from = first
   dates.forEach((date, i) => {
     const amount = base + (i < remainder ? 1 : 0)
     if (amount === 0) return
@@ -184,7 +189,7 @@ export function buildSchedule(draft: PlanDraft): ScheduleResult {
   })
 
   const warning =
-    total < dates.length
+    remaining < dates.length
       ? `الكمية أقل من عدد الأيام المتاحة (${formatNumber(dates.length)})، لذا وُزّعت على ${formatNumber(entries.length)} يومًا فقط.`
       : remainder > 0
         ? `لا تنقسم الكمية بالتساوي تمامًا، فزِيد ${formatNumber(remainder)} على الأيام الأولى بمقدار واحد.`
@@ -192,3 +197,6 @@ export function buildSchedule(draft: PlanDraft): ScheduleResult {
 
   return { ok: true, entries, warning }
 }
+
+export const planRemaining = (plan: Pick<PlanDraft, 'total' | 'startPoint'>) =>
+  Math.max(0, plan.total - Math.max(1, Math.floor(plan.startPoint || 1)) + 1)

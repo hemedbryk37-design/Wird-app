@@ -1,4 +1,4 @@
-import { formatLongDate, formatNumber, formatQuantity, formatShortDate, formatWeekday, type SavedPlan } from './plan'
+import { formatLongDate, formatNumber, formatQuantity, formatShortDate, formatWeekday, type SavedPlan, planRemaining } from './plan'
 import type { PlanProgress } from './progress'
 
 // Keeps the wa.me link comfortably below URL length limits for long plans.
@@ -7,14 +7,14 @@ const MAX_LINES = 30
 export function buildShareText(plan: SavedPlan, progress: PlanProgress) {
   const done = plan.schedule.filter((e) => progress[e.index]?.done)
   const doneAmount = done.reduce((sum, e) => sum + e.amount, 0)
-  const percent = plan.total > 0 ? Math.round((doneAmount / plan.total) * 100) : 0
+  const percent = planRemaining(plan) > 0 ? Math.round((doneAmount / planRemaining(plan)) * 100) : 0
   const last = plan.schedule.at(-1)
 
   const lines = [
     `*خطة متابعة: ${plan.title || 'خطة بلا عنوان'}*`,
     '',
-    `الكمية: ${formatQuantity(plan.total, plan)}`,
-    `الإنجاز: ${formatNumber(doneAmount)} من ${formatQuantity(plan.total, plan)} (${formatNumber(percent)}٪)`,
+    `الكمية: ${formatQuantity(planRemaining(plan), plan)}`,
+    `الإنجاز: ${formatNumber(doneAmount)} من ${formatQuantity(planRemaining(plan), plan)} (${formatNumber(percent)}٪)`,
     `الأيام المنجزة: ${formatNumber(done.length)} / ${formatNumber(plan.schedule.length)}`,
   ]
   if (last) lines.push(`تاريخ الختم: ${formatLongDate(last.date)}`)

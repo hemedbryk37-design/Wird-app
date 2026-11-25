@@ -1,4 +1,5 @@
 import { MAX_IMPORT_BYTES, readTextFile } from './book-import'
+import { buildPdfText, rowsFromPieces, type PdfPiece, type PdfRow } from './pdf-text'
 
 export class ImportError extends Error {}
 
@@ -89,44 +90,36 @@ async function extractEpub(file: File) {
   return chapters.join('\n\n')
 }
 
-type PdfItem = { str: string; transform: number[]; hasEOL?: boolean; height?: number }
+type PdfItem = { str: string; transform: number[]; width?: number; height?: number }
 
 async function extractPdf(file: File) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
   pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
   const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
-  const pages: string[] = []
+  const pages: PdfRow[][] = []
   for (let n = 1; n <= doc.numPages; n++) {
     const page = await doc.getPage(n)
     const content = await page.getTextContent()
-    const rows: { y: number; h: number; text: string }[] = []
+    const pieces: PdfPiece[] = []
     for (const raw of content.items) {
       const item = raw as PdfItem
-      if (typeof item.str !== 'string') continue
-      const y = item.transform?.[5] ?? 0
-      const last = rows.at(-1)
-      if (last && Math.abs(last.y - y) < Math.max(2, (item.height ?? 10) * 0.4)) last.text += item.str
-      else if (item.str.trim() || item.hasEOL) rows.push({ y, h: item.height ?? 10, text: item.str })
-      else if (last) last.text += item.str
+      if (typeof item.str !== 'string' || !item.transform) continue
+      pieces.push({
+        str: item.str,
+        x: item.transform[4],
+        y: item.transform[5],
+        w: item.width ?? 0,
+        h: item.height || Math.abs(item.transform[3]) || 10,
+      })
     }
-    const gaps: number[] = []
-    for (let i = 1; i < rows.length; i++) gaps.push(Math.abs(rows[i - 1].y - rows[i].y))
-    const typical = gaps.length ? [...gaps].sort((a, b) => a - b)[Math.floor(gaps.length / 2)] : 0
-    let out = ''
-    rows.forEach((row, i) => {
-      const text = row.text.trim()
-      if (!text) return
-      if (i > 0) out += typical > 0 && Math.abs(rows[i - 1].y - row.y) > typical * 1.6 ? '\n\n' : '\n'
-      out += text
-    })
-    pages.push(out)
+    pages.push(rowsFromPieces(pieces))
   }
-  const text = pages.join('\n\f\n')
+  const text = buildPdfText(pages)
   const chars = text.replace(/\s/g, '').length
   if (chars < Math.max(20, doc.numPages * 10)) {
     throw new ImportError('هذا الملف PDF مصوَّر (Scan) ولا يحتوي على نص قابل للاستخراج. حوّله إلى نص بأداة OCR ثم ارفعه.')
   }
-  return text
+  return { text, unwrap: format === 'pdf' }
 }
 
 export async function extractBookText(file: File) {
@@ -157,5 +150,5 @@ export async function extractBookText(file: File) {
   if (new Blob([text]).size > MAX_IMPORT_BYTES) {
     throw new ImportError('النص المستخرج كبير جدًا للتخزين في المتصفح؛ الحد الأقصى ١٫٥ م.ب. قسّم الكتاب إلى أجزاء.')
   }
-  return text
+  return { text, unwrap: format === 'pdf' }
 }

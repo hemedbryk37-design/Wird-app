@@ -4,7 +4,7 @@ import { ArrowRight, HardDrive, Share2 } from 'lucide-react'
 import { celebrate } from '@/lib/feedback'
 import { buildShareText, shareToWhatsApp } from '@/lib/share'
 import { Button } from '@/components/ui/button'
-import { formatLongDate, formatNumber, formatQuantity, type SavedPlan } from '@/lib/plan'
+import { formatLongDate, formatNumber, formatQuantity, type SavedPlan, planRemaining } from '@/lib/plan'
 import { formatBytes, progressKey, textPrefix, type PlanProgress } from '@/lib/progress'
 import { useLocalStorage, useStorageBytes } from '@/lib/use-local-storage'
 import { DayCard } from './day-card'
@@ -19,7 +19,7 @@ export function PlanTracker({ plan, onBack }: Props) {
 
   const doneEntries = plan.schedule.filter((e) => progress[e.index]?.done)
   const doneAmount = doneEntries.reduce((sum, e) => sum + e.amount, 0)
-  const percent = plan.total > 0 ? Math.round((doneAmount / plan.total) * 100) : 0
+  const percent = planRemaining(plan) > 0 ? Math.round((doneAmount / planRemaining(plan)) * 100) : 0
   const purgedCount = plan.schedule.filter((e) => progress[e.index]?.purged).length
   const nextEntry = plan.schedule.find((e) => !progress[e.index]?.done)
 
@@ -58,7 +58,7 @@ export function PlanTracker({ plan, onBack }: Props) {
         <p className="text-sm font-medium text-primary">متابعة الورد</p>
         <h1 className="text-3xl font-bold text-balance">{plan.title || 'خطة بلا عنوان'}</h1>
         <p className="text-sm text-muted-foreground">
-          {formatQuantity(plan.total, plan)} · {formatNumber(plan.schedule.length)} يومًا
+          {formatQuantity(planRemaining(plan), plan)} · {formatNumber(plan.schedule.length)} يومًا
           {nextEntry ? ` · الورد التالي: ${formatLongDate(nextEntry.date)}` : ' · اكتملت الخطة'}
         </p>
       </header>
@@ -70,7 +70,7 @@ export function PlanTracker({ plan, onBack }: Props) {
               التقدم العام
             </h2>
             <p className="mt-1 text-xl font-semibold">
-              {formatNumber(doneAmount)} من {formatQuantity(plan.total, plan)}
+              {formatNumber(doneAmount)} من {formatQuantity(planRemaining(plan), plan)}
             </p>
           </div>
           <p className="text-3xl font-bold tabular-nums">{formatNumber(percent)}٪</p>
@@ -78,7 +78,7 @@ export function PlanTracker({ plan, onBack }: Props) {
         <div
           role="progressbar"
           aria-valuemin={0}
-          aria-valuemax={plan.total}
+          aria-valuemax={planRemaining(plan)}
           aria-valuenow={doneAmount}
           aria-valuetext={`${percent}٪`}
           aria-labelledby="progress-heading"

@@ -2,7 +2,7 @@
 
 import { BookOpen, ListChecks, Pencil, Trash2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { formatLongDate, formatNumber, formatQuantity, type SavedPlan } from '@/lib/plan'
+import { formatLongDate, formatNumber, formatQuantity, type SavedPlan, planRemaining } from '@/lib/plan'
 import { progressKey, type PlanProgress } from '@/lib/progress'
 import { useLocalStorage } from '@/lib/use-local-storage'
 
@@ -53,7 +53,7 @@ function SavedPlanCard({
   const [progress] = useLocalStorage<PlanProgress>(progressKey(plan.id), EMPTY_PROGRESS)
   const last = plan.schedule[plan.schedule.length - 1]
   const doneAmount = plan.schedule.reduce((sum, e) => sum + (progress[e.index]?.done ? e.amount : 0), 0)
-  const percent = plan.total > 0 ? Math.round((doneAmount / plan.total) * 100) : 0
+  const percent = planRemaining(plan) > 0 ? Math.round((doneAmount / planRemaining(plan)) * 100) : 0
 
   return (
     <li
@@ -67,7 +67,7 @@ function SavedPlanCard({
         <div className="min-w-0 flex-1">
           <h3 className="truncate font-semibold">{plan.title || 'خطة بلا عنوان'}</h3>
           <p className="text-sm text-muted-foreground">
-            {formatQuantity(plan.total, plan)} · {formatNumber(plan.schedule.length)} يومًا ·{' '}
+            {formatQuantity(planRemaining(plan), plan)} · {formatNumber(plan.schedule.length)} يومًا ·{' '}
             {plan.mode === 'fixed' ? 'ورد ثابت' : 'أيام محددة'}
           </p>
         </div>

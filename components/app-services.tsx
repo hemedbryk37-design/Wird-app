@@ -6,6 +6,7 @@ import { Button } from '@/components/ui/button'
 import { DEFAULT_TONE, playTone, type ToneId } from '@/lib/tones'
 import type { SavedPlan } from '@/lib/plan'
 import { notifyIfDue, parseTime } from '@/lib/reminders'
+import { isNative, scheduleNativeAlarms } from '@/lib/native-alarm'
 import { useLocalStorage } from '@/lib/use-local-storage'
 
 const NO_PLANS: SavedPlan[] = []
@@ -28,7 +29,7 @@ export function AppServices() {
   }, [])
 
   useEffect(() => {
-    if (!('serviceWorker' in navigator)) return
+    if (isNative() || !('serviceWorker' in navigator)) return
     const hadController = !!navigator.serviceWorker.controller
     const reload = () => hadController && location.reload()
     navigator.serviceWorker.addEventListener('controllerchange', reload)
@@ -45,6 +46,10 @@ export function AppServices() {
   }, [])
 
   useEffect(() => {
+    if (isNative()) {
+      void scheduleNativeAlarms(plans).catch(() => {})
+      return
+    }
     const now = new Date()
     const timers: ReturnType<typeof setTimeout>[] = []
 

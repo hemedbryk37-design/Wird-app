@@ -1,4 +1,4 @@
-const CACHE = 'wird-cache-v2'
+const CACHE = 'wird-cache-v3'
 const PRECACHE = ['/', '/manifest.webmanifest', '/icon-192.png', '/icon-512.png', '/apple-icon.png', '/pdf.worker.min.mjs']
 
 self.addEventListener('install', (event) => {
