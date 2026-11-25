@@ -29,7 +29,7 @@ export function AppServices() {
   }, [])
 
   useEffect(() => {
-    if (isNative() || !('serviceWorker' in navigator)) return
+    if (!('serviceWorker' in navigator)) return
     const hadController = !!navigator.serviceWorker.controller
     const reload = () => hadController && location.reload()
     navigator.serviceWorker.addEventListener('controllerchange', reload)

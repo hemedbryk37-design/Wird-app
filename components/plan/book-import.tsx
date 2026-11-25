@@ -84,7 +84,7 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
           </span>
         </label>
         {error && (
-          <p role="alert" className="text-sm text-destructive">
+          <p role="alert" className="whitespace-pre-line break-words text-sm text-destructive">
             {error}
           </p>
         )}
@@ -161,7 +161,7 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
       </div>
 
       {error && (
-        <p role="alert" className="text-sm text-destructive">
+        <p role="alert" className="whitespace-pre-line break-words text-sm text-destructive">
           {error}
         </p>
       )}

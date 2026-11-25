@@ -28,4 +28,4 @@ next-env.d.ts
 # capacitor
 /android
 /out
-public/pdf.worker.min.mjs
+public/pdf.worker.min.js

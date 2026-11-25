@@ -92,34 +92,69 @@ async function extractEpub(file: File) {
 
 type PdfItem = { str: string; transform: number[]; width?: number; height?: number }
 
+type PdfLib = typeof import('pdfjs-dist/legacy/build/pdf.mjs')
+
+const errorDetails = (e: unknown) => {
+  const text = e instanceof Error ? `${e.name}: ${e.message}` : String(e)
+  return text.replace(/\s+/g, ' ').slice(0, 220)
+}
+
+async function openPdf(pdfjs: PdfLib, buffer: ArrayBuffer) {
+  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.js'
+  const open = () =>
+    pdfjs.getDocument({ data: new Uint8Array(buffer.slice(0)), isEvalSupported: false, useSystemFonts: false }).promise
+  try {
+    return await open()
+  } catch (first) {
+    if (first instanceof Error && /password/i.test(first.name + first.message)) throw first
+    try {
+      const worker = await import('pdfjs-dist/legacy/build/pdf.worker.min.mjs')
+      ;(globalThis as unknown as { pdfjsWorker?: unknown }).pdfjsWorker = worker
+      return await open()
+    } catch (second) {
+      throw new Error(`فشل تشغيل قارئ PDF (${errorDetails(first)}) | (${errorDetails(second)})`)
+    }
+  }
+}
+
 async function extractPdf(file: File) {
   const pdfjs = await import('pdfjs-dist/legacy/build/pdf.mjs')
-  pdfjs.GlobalWorkerOptions.workerSrc = '/pdf.worker.min.mjs'
-  const doc = await pdfjs.getDocument({ data: new Uint8Array(await file.arrayBuffer()) }).promise
+  const doc = await openPdf(pdfjs, await file.arrayBuffer())
   const pages: PdfRow[][] = []
+  let failed = 0
+  let lastError: unknown = null
   for (let n = 1; n <= doc.numPages; n++) {
-    const page = await doc.getPage(n)
-    const content = await page.getTextContent()
-    const pieces: PdfPiece[] = []
-    for (const raw of content.items) {
-      const item = raw as PdfItem
-      if (typeof item.str !== 'string' || !item.transform) continue
-      pieces.push({
-        str: item.str,
-        x: item.transform[4],
-        y: item.transform[5],
-        w: item.width ?? 0,
-        h: item.height || Math.abs(item.transform[3]) || 10,
-      })
+    try {
+      const page = await doc.getPage(n)
+      const content = await page.getTextContent()
+      const pieces: PdfPiece[] = []
+      for (const raw of content.items) {
+        const item = raw as PdfItem
+        if (typeof item.str !== 'string' || !item.transform) continue
+        pieces.push({
+          str: item.str,
+          x: item.transform[4],
+          y: item.transform[5],
+          w: item.width ?? 0,
+          h: item.height || Math.abs(item.transform[3]) || 10,
+        })
+      }
+      pages.push(rowsFromPieces(pieces))
+    } catch (e) {
+      failed++
+      lastError = e
+      pages.push([])
     }
-    pages.push(rowsFromPieces(pieces))
+  }
+  if (failed === doc.numPages) {
+    throw new Error(`تعذّر استخراج النص من أي صفحة (${errorDetails(lastError)})`)
   }
   const text = buildPdfText(pages)
   const chars = text.replace(/\s/g, '').length
   if (chars < Math.max(20, doc.numPages * 10)) {
     throw new ImportError('هذا الملف PDF مصوَّر (Scan) ولا يحتوي على نص قابل للاستخراج. حوّله إلى نص بأداة OCR ثم ارفعه.')
   }
-  return { text, unwrap: format === 'pdf' }
+  return text
 }
 
 export async function extractBookText(file: File) {
@@ -139,10 +174,12 @@ export async function extractBookText(file: File) {
     else text = await extractPdf(file)
   } catch (e) {
     if (e instanceof ImportError) throw e
+    console.error('book import failed', e)
+    if (format === 'pdf' && e instanceof Error && /password/i.test(e.name + e.message)) {
+      throw new ImportError('ملف PDF محمي بكلمة مرور.')
+    }
     throw new ImportError(
-      format === 'pdf' && e instanceof Error && /password/i.test(e.name + e.message)
-        ? 'ملف PDF محمي بكلمة مرور.'
-        : 'تعذّرت قراءة الملف. تأكد أنه سليم وغير تالف، وأن الصيغة مدعومة (‎.doc القديم غير مدعوم؛ احفظه بصيغة ‎.docx).',
+      `تعذّرت قراءة الملف. تأكد أنه سليم وغير تالف، وأن الصيغة مدعومة (‎.doc القديم غير مدعوم؛ احفظه بصيغة ‎.docx).\nالتفاصيل التقنية: ${errorDetails(e)}`,
     )
   }
   text = format === 'pdf' ? text.replace(/\r\n?/g, '\n') : normalize(text)

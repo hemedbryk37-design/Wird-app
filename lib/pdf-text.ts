@@ -10,16 +10,30 @@ const MIRROR: Record<string, string> = { '(': ')', ')': '(', '[': ']', ']': '[',
 const ARABIC = /[\u0600-\u06FF]/
 const END_OF_SENTENCE = /[.!?؟:؛﴾)»"”]$/
 
+const basicClean = (raw: string) => raw.replace(/[\u0000-\u001F\u007F-\u009F\uFFFD\uFEFF]/g, ' ').trim()
+
 export function cleanLine(raw: string) {
-  return raw
-    .replace(/\t/g, ' ')
-    .replace(JUNK, '')
-    .replace(PRESENTATION, (s) => s.normalize('NFKC'))
-    .normalize('NFC')
-    .replace(/^ +| +$/g, '')
+  try {
+    return raw
+      .replace(/\t/g, ' ')
+      .replace(JUNK, '')
+      .replace(PRESENTATION, (s) => s.normalize('NFKC'))
+      .normalize('NFC')
+      .replace(/^ +| +$/g, '')
+  } catch {
+    return basicClean(String(raw))
+  }
 }
 
 export function reverseLine(line: string) {
+  try {
+    return reverseLineUnsafe(line)
+  } catch {
+    return line
+  }
+}
+
+function reverseLineUnsafe(line: string) {
   const clusters = Array.from(line.matchAll(CLUSTER), (m) => m[2] + Array.from(m[1]).reverse().join('')).reverse()
   const reversed = clusters.join('')
   return reversed
@@ -28,6 +42,14 @@ export function reverseLine(line: string) {
 }
 
 function orientationScore(text: string) {
+  try {
+    return orientationScoreUnsafe(text)
+  } catch {
+    return 0
+  }
+}
+
+function orientationScoreUnsafe(text: string) {
   const words = text.split(/\s+/).filter((w) => w.length >= 3 && ARABIC.test(w))
   let score = 0
   for (const w of words) {
@@ -87,6 +109,14 @@ function paragraphs(rows: PdfRow[]) {
 }
 
 export function buildPdfText(pages: PdfRow[][]) {
+  try {
+    return buildPdfTextUnsafe(pages)
+  } catch {
+    return pages.map((rows) => rows.map((r) => basicClean(r.text)).filter(Boolean).join('\n')).join('\n\f\n')
+  }
+}
+
+function buildPdfTextUnsafe(pages: PdfRow[][]) {
   const cleaned = pages.map((rows) =>
     rows.map((r) => ({ y: r.y, text: cleanLine(r.text) })).filter((r) => r.text),
   )
