@@ -14,6 +14,7 @@ import { SchedulePreview } from './schedule-preview'
 import { SavedPlans } from './saved-plans'
 import { PlanTracker } from './plan-tracker'
 import { UpdateButton } from '@/components/update-button'
+import { APP_VERSION, APP_VERSION_NOTE } from '@/lib/version'
 import { latestBookmark, useBookmarks, useResume } from '@/lib/bookmarks'
 
 const DRAFT_KEY = 'mutabaa:draft'
@@ -249,8 +250,11 @@ export function PlanSetup() {
         )}
       </section>
 
-      <footer className="flex justify-center border-t border-border pt-6">
+      <footer className="flex flex-col items-center gap-3 border-t border-border pt-6 text-center">
         <UpdateButton />
+        <p className="text-xs text-muted-foreground text-pretty">
+          الإصدار {APP_VERSION} - {APP_VERSION_NOTE}
+        </p>
       </footer>
     </main>
   )

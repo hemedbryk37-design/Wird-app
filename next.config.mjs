@@ -6,6 +6,15 @@ const nextConfig = {
   images: {
     unoptimized: true,
   },
+  turbopack: {
+    resolveAlias: {
+      canvas: './lib/empty-module.js',
+    },
+  },
+  webpack: (config) => {
+    config.resolve.alias.canvas = false
+    return config
+  },
 }
 
 export default nextConfig

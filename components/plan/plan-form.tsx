@@ -2,6 +2,7 @@
 
 import { CalendarDays, Repeat } from 'lucide-react'
 import { cn } from '@/lib/utils'
+import { DEFAULT_TONE } from '@/lib/tones'
 import { UNIT_OPTIONS, WEEKDAYS, formatLongDate, unitLabel, type PlanDraft, type PlanMode, type UnitKey } from '@/lib/plan'
 import { ReminderField } from './reminder-field'
 
@@ -212,6 +213,8 @@ export function PlanForm({ draft, onChange, renderImport, totalLocked }: Props) 
         <ReminderField
           value={draft.reminderTime ?? ''}
           onChange={(reminderTime) => onChange({ reminderTime })}
+          tone={draft.tone ?? DEFAULT_TONE}
+          onToneChange={(tone) => onChange({ tone })}
           alarm={!!draft.alarmMode}
           onAlarmChange={(alarmMode) => onChange({ alarmMode })}
           fieldClass={fieldClass}

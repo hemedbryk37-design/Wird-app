@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { BellRing } from 'lucide-react'
 import { Button } from '@/components/ui/button'
-import { startAlarm } from '@/lib/feedback'
+import { DEFAULT_TONE, playTone, type ToneId } from '@/lib/tones'
 import type { SavedPlan } from '@/lib/plan'
 import { notifyIfDue, parseTime } from '@/lib/reminders'
 import { useLocalStorage } from '@/lib/use-local-storage'
@@ -16,15 +16,24 @@ export function AppServices() {
   const [ringing, setRinging] = useState<string | null>(null)
   const stopRef = useRef<(() => void) | null>(null)
 
-  const ring = useCallback((title: string) => {
+  const ring = useCallback((title: string, tone: ToneId, loop: boolean) => {
     stopRef.current?.()
-    setRinging(title)
-    stopRef.current = startAlarm(() => setRinging(null))
+    stopRef.current = null
+    if (loop) setRinging(title)
+    void playTone(tone, { loop }).then((handle) => {
+      if (!handle) return setRinging(null)
+      stopRef.current = handle.stop
+      void handle.done.then(() => setRinging(null))
+    })
   }, [])
 
   useEffect(() => {
     if (!('serviceWorker' in navigator)) return
+    const hadController = !!navigator.serviceWorker.controller
+    const reload = () => hadController && location.reload()
+    navigator.serviceWorker.addEventListener('controllerchange', reload)
     navigator.serviceWorker.register('/sw.js').catch(() => {})
+    return () => navigator.serviceWorker.removeEventListener('controllerchange', reload)
   }, [])
 
   // Re-evaluate reminders when the app returns to the foreground, since
@@ -47,7 +56,7 @@ export function AppServices() {
       const delay = at.getTime() - now.getTime()
       const fire = (at?: Date) =>
         notifyIfDue(plan, at).then((fired) => {
-          if (fired && plan.alarmMode) ring(plan.title || 'خطتك')
+          if (fired) ring(plan.title || 'خطتك', plan.tone ?? DEFAULT_TONE, !!plan.alarmMode)
         })
       if (delay <= 0) void fire(now)
       else timers.push(setTimeout(() => void fire(), delay))

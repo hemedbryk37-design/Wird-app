@@ -52,7 +52,7 @@ export async function notifyIfDue(plan: SavedPlan, now = new Date()) {
   if (!entry || readProgress(plan.id)[entry.index]?.done) return false
   if (localStorage.getItem(notifiedKey(plan.id)) === today) return false
   localStorage.setItem(notifiedKey(plan.id), today)
-  if (getNotificationState() !== 'granted') return !!plan.alarmMode
+  if (getNotificationState() !== 'granted') return true
 
   await showNotification(
     `حان وقت ورد: ${plan.title || 'خطتك'}`,
@@ -60,5 +60,5 @@ export async function notifyIfDue(plan: SavedPlan, now = new Date()) {
     `mutabaa-${plan.id}`,
     !!plan.alarmMode,
   )
-  return !!plan.alarmMode
+  return true
 }

@@ -1,21 +1,90 @@
 'use client'
 
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { Bell, BellOff, BellRing, X } from 'lucide-react'
 import { cn } from '@/lib/utils'
 import { Button } from '@/components/ui/button'
+import {
+  MAX_TONE_BYTES,
+  TONE_OPTIONS,
+  clearCustomTone,
+  isAudioFile,
+  loadCustomTone,
+  playTone,
+  saveCustomTone,
+  type ToneHandle,
+  type ToneId,
+} from '@/lib/tones'
 import { getNotificationState, sendTestNotification, type NotificationState } from '@/lib/reminders'
 
 type Props = {
   value: string
   onChange: (value: string) => void
+  tone: ToneId
+  onToneChange: (value: ToneId) => void
   alarm: boolean
   onAlarmChange: (value: boolean) => void
   fieldClass: string
 }
 
-export function ReminderField({ value, onChange, alarm, onAlarmChange, fieldClass }: Props) {
+export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAlarmChange, fieldClass }: Props) {
   const [permission, setPermission] = useState<NotificationState>(getNotificationState)
+  const [customName, setCustomName] = useState<string | null>(null)
+  const [toneError, setToneError] = useState<string | null>(null)
+  const [playing, setPlaying] = useState(false)
+  const handle = useRef<ToneHandle | null>(null)
+
+  useEffect(() => {
+    loadCustomTone()
+      .then((saved) => setCustomName(saved?.name ?? null))
+      .catch(() => {})
+    return () => handle.current?.stop()
+  }, [])
+
+  const stopPreview = () => {
+    handle.current?.stop()
+    handle.current = null
+    setPlaying(false)
+  }
+
+  const preview = async () => {
+    if (playing) return stopPreview()
+    setToneError(null)
+    const started = await playTone(tone, { maxMs: 10000 })
+    if (!started) {
+      setToneError(tone === 'custom' ? 'ارفع ملفًا صوتيًا أولًا.' : 'تعذّر تشغيل الصوت على هذا الجهاز.')
+      return
+    }
+    handle.current = started
+    setPlaying(true)
+    void started.done.then(() => {
+      if (handle.current === started) {
+        handle.current = null
+        setPlaying(false)
+      }
+    })
+  }
+
+  const pickFile = async (file: File | undefined) => {
+    if (!file) return
+    setToneError(null)
+    if (!isAudioFile(file)) return setToneError('الصيغ المدعومة: MP3 وWAV وOGG.')
+    if (file.size > MAX_TONE_BYTES) return setToneError('الملف كبير؛ الحد الأقصى ٥ م.ب.')
+    try {
+      await saveCustomTone(file)
+      setCustomName(file.name)
+      onToneChange('custom')
+    } catch {
+      setToneError('تعذّر حفظ الملف في المتصفح.')
+    }
+  }
+
+  const removeCustom = async () => {
+    stopPreview()
+    await clearCustomTone().catch(() => {})
+    setCustomName(null)
+    if (tone === 'custom') onToneChange('calm')
+  }
 
   const enable = async () => {
     const result = await Notification.requestPermission()
@@ -50,6 +119,74 @@ export function ReminderField({ value, onChange, alarm, onAlarmChange, fieldClas
             </Button>
           )}
         </div>
+      </div>
+
+      <div className="flex flex-col gap-2">
+        <label htmlFor="toneSelect" className="text-sm font-medium">
+          نغمة التنبيه
+        </label>
+        <div className="flex gap-2">
+          <select
+            id="toneSelect"
+            className={fieldClass}
+            value={tone}
+            onChange={(e) => {
+              stopPreview()
+              setToneError(null)
+              onToneChange(e.target.value as ToneId)
+            }}
+          >
+            {TONE_OPTIONS.map((o) => (
+              <option key={o.value} value={o.value}>
+                {o.label}
+              </option>
+            ))}
+          </select>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="size-11 shrink-0 text-lg"
+            onClick={() => void preview()}
+            aria-label={playing ? 'إيقاف التجربة' : 'تجربة النغمة'}
+          >
+            {playing ? '⏹' : '🔊'}
+          </Button>
+        </div>
+        {tone === 'custom' && (
+          <div className="flex flex-col gap-2 rounded-lg bg-secondary p-3 text-sm">
+            <label className="flex cursor-pointer flex-wrap items-center gap-2">
+              <span className="rounded-md border border-input bg-card px-3 py-1.5 font-medium">
+                {customName ? 'استبدال الملف الصوتي' : 'اختيار ملف صوتي'}
+              </span>
+              <span className="min-w-0 truncate text-muted-foreground" dir="auto">
+                {customName ?? 'MP3 · WAV · OGG'}
+              </span>
+              <input
+                type="file"
+                accept=".mp3,.wav,.ogg,audio/mpeg,audio/wav,audio/ogg"
+                className="sr-only"
+                onChange={(e) => {
+                  void pickFile(e.target.files?.[0])
+                  e.target.value = ''
+                }}
+              />
+            </label>
+            {customName && (
+              <Button type="button" variant="ghost" size="sm" className="self-start" onClick={() => void removeCustom()}>
+                حذف النغمة المحفوظة
+              </Button>
+            )}
+          </div>
+        )}
+        {toneError && (
+          <p role="alert" className="text-sm text-destructive">
+            {toneError}
+          </p>
+        )}
+        <p className="text-xs text-muted-foreground text-pretty">
+          تُسمَع النغمة عند فتح التطبيق وقت التنبيه؛ أما والتطبيق مغلق فيستخدم النظام صوت الإشعار الافتراضي.
+        </p>
       </div>
 
       <div className="flex flex-col gap-1.5">

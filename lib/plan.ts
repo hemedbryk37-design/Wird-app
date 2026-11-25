@@ -1,3 +1,4 @@
+import type { ToneId } from './tones'
 export type UnitKey = 'verse' | 'ayah' | 'hadith' | 'page' | 'chapter' | 'custom'
 export type PlanMode = 'fixed' | 'weekdays'
 
@@ -13,6 +14,7 @@ export type PlanDraft = {
   startDate: string
   reminderTime?: string
   alarmMode?: boolean
+  tone?: ToneId
 }
 
 export type ScheduleEntry = {

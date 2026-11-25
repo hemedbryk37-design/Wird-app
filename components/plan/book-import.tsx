@@ -5,14 +5,8 @@ import { FileText, FileUp, Loader2, RefreshCw, X } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { cn } from '@/lib/utils'
 import { formatQuantity, type PlanDraft } from '@/lib/plan'
-import {
-  DEFAULT_WORDS_PER_PAGE,
-  MAX_IMPORT_BYTES,
-  describeSplit,
-  readTextFile,
-  type ImportedBook,
-  type SplitResult,
-} from '@/lib/book-import'
+import { DEFAULT_WORDS_PER_PAGE, describeSplit, type ImportedBook, type SplitResult } from '@/lib/book-import'
+import { ACCEPTED_BOOKS, ImportError, extractBookText } from '@/lib/book-extract'
 
 type Props = {
   draft: Pick<PlanDraft, 'unit' | 'customUnit'>
@@ -34,24 +28,12 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
   const handleFile = async (file: File | undefined) => {
     if (!file) return
     setError(null)
-    if (!/\.txt$/i.test(file.name) && file.type !== 'text/plain') {
-      setError('يُقبل ملف نصي بامتداد ‎.txt فقط.')
-      return
-    }
-    if (file.size > MAX_IMPORT_BYTES) {
-      setError('الملف كبير جدًا للتخزين في المتصفح؛ الحد الأقصى ١٫٥ م.ب. قسّمه إلى أجزاء.')
-      return
-    }
     setLoading(true)
     try {
-      const text = await readTextFile(file)
-      if (!text.trim()) {
-        setError('الملف فارغ.')
-        return
-      }
+      const text = await extractBookText(file)
       onImport({ name: file.name, text, wordsPerPage: book?.wordsPerPage ?? DEFAULT_WORDS_PER_PAGE })
-    } catch {
-      setError('تعذّرت قراءة الملف.')
+    } catch (e) {
+      setError(e instanceof ImportError ? e.message : 'تعذّرت قراءة الملف.')
     } finally {
       setLoading(false)
       if (inputRef.current) inputRef.current.value = ''
@@ -63,7 +45,7 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
       ref={inputRef}
       id={inputId}
       type="file"
-      accept=".txt,text/plain"
+      accept={ACCEPTED_BOOKS}
       className="sr-only"
       onChange={(e) => handleFile(e.target.files?.[0])}
     />
@@ -96,9 +78,9 @@ export function BookImport({ draft, book, split, onImport, onChange, onRemove, f
           <span className="flex size-10 items-center justify-center rounded-full bg-card text-primary shadow-xs">
             {loading ? <Loader2 className="size-5 animate-spin" aria-hidden /> : <FileUp className="size-5" aria-hidden />}
           </span>
-          <span className="text-sm font-semibold text-foreground">رفع ملف كتاب ‎(.txt)</span>
+          <span className="text-sm font-semibold text-foreground">رفع ملف كتاب ‎(TXT · DOCX · EPUB · PDF)</span>
           <span className="max-w-xs text-xs leading-relaxed text-muted-foreground text-pretty">
-            يُقسَّم النص تلقائيًا حسب نوع الوحدة ويوزَّع على أيام الجدول عند الحفظ، دون نسخ ولصق.
+            يُستخرج النص داخل المتصفح دون إنترنت، ويُقسَّم حسب نوع الوحدة ويوزَّع على أيام الجدول عند الحفظ.
           </span>
         </label>
         {error && (
