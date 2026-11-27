@@ -21,16 +21,31 @@ const hash = (value: string) => {
   return ((h >>> 0) % 2147483000) + 1
 }
 
-const channelFor = (tone: ToneId, alarm: boolean) => ({
-  id: `wird-${tone}-${alarm ? 'alarm' : 'normal'}`,
-  name: alarm ? `منبه الورد (${tone})` : `تنبيه الورد (${tone})`,
-  description: 'تنبيهات الورد اليومي',
-  importance: (alarm ? 5 : 4) as 4 | 5,
-  visibility: 1 as const,
-  vibration: true,
-  lights: true,
-  ...(tone === 'custom' ? {} : { sound: `wird_${tone}.wav` }),
-})
+const ALARM_CHANNEL = 'wird-alarm'
+const TEST_ID = 987654
+
+const channelFor = (tone: ToneId, alarm: boolean) =>
+  alarm
+    ? {
+        id: ALARM_CHANNEL,
+        name: 'منبه الورد',
+        description: 'منبه الورد اليومي بأعلى أولوية',
+        importance: 5 as const,
+        visibility: 1 as const,
+        vibration: true,
+        lights: true,
+        sound: 'wird_alarm.wav',
+      }
+    : {
+        id: `wird-${tone}-normal`,
+        name: `تنبيه الورد (${tone})`,
+        description: 'تنبيهات الورد اليومي',
+        importance: 4 as const,
+        visibility: 1 as const,
+        vibration: true,
+        lights: true,
+        ...(tone === 'custom' ? {} : { sound: `wird_${tone}.wav` }),
+      }
 
 export async function prepareNativeAlarm() {
   if (!isNative()) return
@@ -90,4 +105,44 @@ export async function scheduleNativeAlarms(plans: SavedPlan[]) {
       autoCancel: true,
     })),
   })
+}
+
+export type AlarmTestResult = { ok: boolean; message: string }
+
+export async function testNativeAlarm(): Promise<AlarmTestResult> {
+  if (!isNative()) return { ok: false, message: 'هذا الاختبار متاح داخل تطبيق أندرويد فقط.' }
+  try {
+    const plugin = await loadPlugin()
+    let granted = await plugin.checkPermissions()
+    if (granted.display !== 'granted') granted = await plugin.requestPermissions()
+    if (granted.display !== 'granted') {
+      return { ok: false, message: 'صلاحية الإشعارات غير ممنوحة. فعّلها من إعدادات الهاتف ثم أعد الاختبار.' }
+    }
+    const exact = await plugin.checkExactNotificationSetting().catch(() => null)
+    if (exact && exact.exact_alarm !== 'granted') {
+      await plugin.changeExactNotificationSetting().catch(() => {})
+      return { ok: false, message: 'فعّل «المنبهات والتذكيرات» للتطبيق من الإعدادات التي فُتحت، ثم أعد الاختبار.' }
+    }
+    await plugin.createChannel(channelFor('calm', true))
+    await plugin.cancel({ notifications: [{ id: TEST_ID }] }).catch(() => {})
+    await plugin.schedule({
+      notifications: [
+        {
+          id: TEST_ID,
+          title: 'اختبار منبه الورد',
+          body: 'نجح المنبه. هكذا ستصلك تنبيهات الورد.',
+          channelId: ALARM_CHANNEL,
+          schedule: { at: new Date(Date.now() + 10000), allowWhileIdle: true },
+          autoCancel: true,
+        },
+      ],
+    })
+    const pending = await plugin.getPending()
+    if (!pending.notifications.some((n) => n.id === TEST_ID)) {
+      return { ok: false, message: 'لم تُسجَّل الجدولة في النظام. تحقق من صلاحيات المنبهات.' }
+    }
+    return { ok: true, message: 'تمت الجدولة بنجاح. أغلق التطبيق تماماً وانتظر ١٠ ثوانٍ ليرنّ المنبه.' }
+  } catch (e) {
+    return { ok: false, message: `تعذّرت الجدولة: ${e instanceof Error ? e.message : String(e)}` }
+  }
 }

@@ -1,2 +1,2 @@
-export const APP_VERSION = '3.1'
-export const APP_VERSION_NOTE = 'قراءة PDF محسّنة داخل أندرويد، نقطة البداية، ومنبه أندرويد أصلي'
+export const APP_VERSION = '3.2'
+export const APP_VERSION_NOTE = 'إتقان عربي PDF، منبه أندرويد محلي، وأيقونة جديدة'

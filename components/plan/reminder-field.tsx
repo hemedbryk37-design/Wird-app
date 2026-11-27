@@ -15,7 +15,7 @@ import {
   type ToneHandle,
   type ToneId,
 } from '@/lib/tones'
-import { isNative, prepareNativeAlarm } from '@/lib/native-alarm'
+import { isNative, prepareNativeAlarm, testNativeAlarm, type AlarmTestResult } from '@/lib/native-alarm'
 import { getNotificationState, sendTestNotification, type NotificationState } from '@/lib/reminders'
 
 type Props = {
@@ -33,6 +33,8 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
   const [customName, setCustomName] = useState<string | null>(null)
   const [toneError, setToneError] = useState<string | null>(null)
   const [playing, setPlaying] = useState(false)
+  const [testing, setTesting] = useState(false)
+  const [testResult, setTestResult] = useState<AlarmTestResult | null>(null)
   const handle = useRef<ToneHandle | null>(null)
 
   useEffect(() => {
@@ -41,6 +43,13 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
       .catch(() => {})
     return () => handle.current?.stop()
   }, [])
+
+  const runAlarmTest = async () => {
+    setTesting(true)
+    setTestResult(null)
+    setTestResult(await testNativeAlarm())
+    setTesting(false)
+  }
 
   const stopPreview = () => {
     handle.current?.stop()
@@ -187,7 +196,7 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
         )}
         <p className="text-xs text-muted-foreground text-pretty">
           {isNative()
-            ? 'في أندرويد تُستخدم النغمات المدمجة الأربع للمنبه؛ والنغمة المخصصة تعمل داخل التطبيق فقط ويُستخدم صوت النظام لها خارجه.'
+            ? 'في أندرويد: وضع المنبه يستخدم نغمة منبه قوية، وبدونه تُستخدم النغمة المختارة (المخصصة تعمل داخل التطبيق فقط).'
             : 'تُسمَع النغمة عند فتح التطبيق وقت التنبيه؛ أما والتطبيق مغلق فيستخدم النظام صوت الإشعار الافتراضي.'}
         </p>
       </div>
@@ -222,11 +231,24 @@ export function ReminderField({ value, onChange, tone, onToneChange, alarm, onAl
         {alarm && (
           <p className="text-xs text-muted-foreground text-pretty">
             {isNative()
-              ? 'يُجدوَل المنبه عبر نظام أندرويد بقناة عالية الأولوية، فيرنّ والتطبيق مغلق أو والهاتف في وضع السكون.'
+              ? 'يُجدوَل المنبه عبر نظام أندرويد بقناة بأعلى أولوية ونغمة منبه قوية، فيرنّ والتطبيق مغلق أو والهاتف في وضع السكون.'
               : 'يبقى الإشعار ظاهرًا مع اهتزاز قوي، ويرنّ صوت منبه عند فتح التطبيق. للرنين والتطبيق مغلق ثبّت نسخة أندرويد (APK).'}
           </p>
         )}
       </div>
+
+      {isNative() && (
+        <div className="flex flex-col gap-2">
+          <Button type="button" variant="outline" size="sm" className="self-start" disabled={testing} onClick={() => void runAlarmTest()}>
+            اختبار منبه الأندرويد بعد 10 ثوانٍ
+          </Button>
+          {testResult && (
+            <p role="status" className={cn('text-sm', testResult.ok ? 'text-primary' : 'text-destructive')}>
+              {testResult.message}
+            </p>
+          )}
+        </div>
+      )}
 
       {value && (
         <div className="flex flex-col gap-2 rounded-lg bg-secondary p-3 text-sm" role="status" aria-live="polite">
